@@ -1,5 +1,5 @@
 import { FaBrain, FaGithub } from "react-icons/fa";
-
+import { ModeToggle } from "./mode-toggle";
 export const Navbar = () => {
   return (
     <nav className="fixed w-full top-0 z-50 backdrop-blur-md bg-background/50 border-b">
@@ -12,8 +12,10 @@ export const Navbar = () => {
 
           <div className="flex items-center gap-4">
             <a href="https://github.com/behalnihal/sahayak-ai">
-              <FaGithub className="w-5 h-5 inline" />
+              <FaGithub className="w-5 h-5" />
             </a>
+
+            <ModeToggle />
           </div>
         </div>
       </div>
