@@ -6,6 +6,9 @@ import { cn } from "@/lib/utils";
 import { BlurFade } from "../magicui/blur-fade";
 import { SparklesText } from "../magicui/sparkles-text";
 import { NumberTicker } from "../magicui/number-ticker";
+import Link from "next/link";
+import { ArrowRightIcon } from "lucide-react";
+import { Button } from "../ui/button";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -60,6 +63,15 @@ export const Hero = () => {
         maps, take MCQ tests, and retain <NumberTicker value={100} />% more
         effectively.
       </motion.h2>
+
+      <motion.div variants={itemVariants} className="z-20">
+        <Link href="/">
+          <Button className=" rounded-full">
+            Get Started
+            <ArrowRightIcon className="w-8 h-8 transform transition-transform duration-300 group-hover:translate-x-1" />
+          </Button>
+        </Link>
+      </motion.div>
     </motion.div>
   );
 };
