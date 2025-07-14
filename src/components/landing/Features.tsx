@@ -20,11 +20,9 @@ const features = [
 
 export const Features = () => {
   return (
-    <section className="px-6 py-24 relative">
+    <section className="px-6 py-5 relative bg-background text-foreground">
       <div className="max-w-6xl mx-auto text-center relative z-[1]">
-        <h2 className="text-4xl md:text-5xl font-extrabold mb-6">
-          Features That Stick
-        </h2>
+        <h2 className="text-4xl md:text-5xl font-extrabold mb-6">Features</h2>
         <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-14">
           Our platform is designed to help you learn and retain information
           effectively. We offer a range of features that are tailored to your

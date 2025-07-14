@@ -51,7 +51,6 @@ export const Hero = () => {
           <span>Your personal tutor for</span>
           <br />
           <SparklesText>Learning Anything</SparklesText>
-          <span>Keeps You Ahead</span>
         </BlurFade>
       </motion.div>
 
@@ -64,8 +63,8 @@ export const Hero = () => {
         effectively.
       </motion.h2>
 
-      <motion.div variants={itemVariants} className="z-20">
-        <Link href="/">
+      <motion.div variants={itemVariants} className="z-20 py-20">
+        <Link href="/signup">
           <Button className=" rounded-full">
             Get Started
             <ArrowRightIcon className="w-8 h-8 transform transition-transform duration-300 group-hover:translate-x-1" />
