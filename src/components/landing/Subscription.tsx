@@ -9,7 +9,7 @@ export const Subscription = () => {
       </div>
       <div className="flex flex-col md:flex-row gap-8 justify-center items-center">
         {/* Basic Plan */}
-        <div className="flex-1 max-w-sm bg-white/30 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md p-8 flex flex-col items-center transition-all hover:scale-[1.03]">
+        <div className="flex-1 max-w-sm bg-white/5 border border-white/10 backdrop-blur-lg rounded-2xl shadow-md p-8 flex flex-col items-center transition-all hover:scale-[1.03]">
           <h2 className="text-xl font-semibold mb-2">Basic</h2>
           <div className="text-3xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">
             Free
@@ -24,7 +24,7 @@ export const Subscription = () => {
           </button>
         </div>
         {/* Pro Plan (Highlighted) */}
-        <div className="flex-1 max-w-sm bg-white/70 dark:bg-gray-900/80 border-2 border-indigo-600 dark:border-indigo-500 rounded-3xl shadow-xl p-10 flex flex-col items-center scale-105 z-10 relative -my-4 md:my-0 transition-all">
+        <div className="flex-1 max-w-sm bg-white/5 border border-white/10 backdrop-blur-lg rounded-2xl shadow-md p-8 flex flex-col items-center transition-all hover:scale-[1.03]">
           <div className="absolute -top-5 left-1/2 -translate-x-1/2">
             <span className="bg-indigo-600 text-white text-xs px-3 py-1 rounded-full font-semibold shadow">
               Most Popular
@@ -45,7 +45,7 @@ export const Subscription = () => {
           </button>
         </div>
         {/* Enterprise Plan */}
-        <div className="flex-1 max-w-sm bg-white/30 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md p-8 flex flex-col items-center transition-all hover:scale-[1.03]">
+        <div className="flex-1 max-w-sm bg-white/5 border border-white/10 backdrop-blur-lg rounded-2xl shadow-md p-8 flex flex-col items-center transition-all hover:scale-[1.03]">
           <h2 className="text-xl font-semibold mb-2">Enterprise</h2>
           <div className="text-3xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">
             Custom

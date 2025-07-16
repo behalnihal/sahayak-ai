@@ -35,9 +35,17 @@ export function FAQ() {
       <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-10 text-center tracking-tight">
         Frequently Asked Questions
       </h2>
-      <Accordion className="bg-white/70 dark:bg-gray-900/60 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">
+      <Accordion
+        type="single"
+        collapsible
+        defaultValue={faqData[faqData.length - 1].question}
+      >
         {faqData.map((item) => (
-          <AccordionItem key={item.question} className="border-none">
+          <AccordionItem
+            value={item.question}
+            key={item.question}
+            className="border-none"
+          >
             <AccordionTrigger className="text-base md:text-lg font-medium px-6 py-4 focus:outline-none">
               {item.question}
             </AccordionTrigger>

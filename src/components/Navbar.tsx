@@ -1,6 +1,7 @@
 import { FaBrain, FaGithub } from "react-icons/fa";
 import { ModeToggle } from "./mode-toggle";
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 export const Navbar = () => {
   return (
     <nav className="fixed w-full top-0 z-50 backdrop-blur-md bg-background/50 border-b">
@@ -17,6 +18,7 @@ export const Navbar = () => {
             </a>
 
             <ModeToggle />
+            <UserButton />
           </div>
         </div>
       </div>
