@@ -24,37 +24,38 @@ const faqData = [
   },
   {
     question: "How do I contact support?",
-    answer:
-      "You can reach out to our support team via the contact form or email us directly at support@example.com.",
+    answer: "You can reach out to me on Github",
   },
 ];
 
 export function FAQ() {
   return (
-    <section className="max-w-2xl mx-auto px-4 py-20">
-      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-10 text-center tracking-tight">
-        Frequently Asked Questions
-      </h2>
-      <Accordion
-        type="single"
-        collapsible
-        defaultValue={faqData[faqData.length - 1].question}
-      >
-        {faqData.map((item) => (
-          <AccordionItem
-            value={item.question}
-            key={item.question}
-            className="border-none"
-          >
-            <AccordionTrigger className="text-base md:text-lg font-medium px-6 py-4 focus:outline-none">
-              {item.question}
-            </AccordionTrigger>
-            <AccordionContent className="px-6 pb-4 text-gray-600 dark:text-gray-300 text-sm md:text-base">
-              {item.answer}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+    <section className="relative bg-background/50 backdrop-blur-sm border-y border-border/50">
+      <div className="max-w-2xl mx-auto px-6 py-24">
+        <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          Frequently Asked Questions
+        </h2>
+        <Accordion
+          type="single"
+          collapsible
+          defaultValue={faqData[faqData.length - 1].question}
+        >
+          {faqData.map((item) => (
+            <AccordionItem
+              value={item.question}
+              key={item.question}
+              className="border-none bg-card/50 backdrop-blur-sm rounded-lg mb-2"
+            >
+              <AccordionTrigger className="text-base md:text-lg font-medium px-6 py-4 focus:outline-none text-foreground hover:text-foreground/80">
+                {item.question}
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-4 text-muted-foreground text-sm md:text-base">
+                {item.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
     </section>
   );
 }

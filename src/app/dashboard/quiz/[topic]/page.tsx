@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,13 +75,7 @@ export default function QuizPage() {
     }
   }, [topicId]);
 
-  useEffect(() => {
-    if (!topicLoading && topicName !== "Loading...") {
-      generateQuiz();
-    }
-  }, [topicName, topicLoading]);
-
-  const generateQuiz = async () => {
+  const generateQuiz = useCallback(async () => {
     setGenerating(true);
     setError(null);
 
@@ -105,7 +99,13 @@ export default function QuizPage() {
       setGenerating(false);
       setLoading(false);
     }
-  };
+  }, [topicName]);
+
+  useEffect(() => {
+    if (!topicLoading && topicName !== "Loading...") {
+      generateQuiz();
+    }
+  }, [topicName, topicLoading, generateQuiz]);
 
   const startQuiz = () => {
     setStartTime(new Date());

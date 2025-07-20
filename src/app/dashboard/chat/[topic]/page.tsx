@@ -39,21 +39,34 @@ function MarkdownWithMermaid({ content }: { content: string }) {
   useEffect(() => {
     if (!ref.current) return;
 
-    // Initialize mermaid
+    // Initialize mermaid with theme-aware colors
+    const isDark = document.documentElement.classList.contains("dark");
     mermaid.initialize({
       startOnLoad: false,
-      theme: "dark",
-      themeVariables: {
-        primaryColor: "#3b82f6",
-        primaryTextColor: "#ffffff",
-        primaryBorderColor: "#1e40af",
-        lineColor: "#6b7280",
-        sectionBkgColor: "#1f2937",
-        altSectionBkgColor: "#374151",
-        gridColor: "#4b5563",
-        secondaryColor: "#10b981",
-        tertiaryColor: "#f59e0b",
-      },
+      theme: isDark ? "dark" : "default",
+      themeVariables: isDark
+        ? {
+            primaryColor: "#3b82f6",
+            primaryTextColor: "#ffffff",
+            primaryBorderColor: "#1e40af",
+            lineColor: "#6b7280",
+            sectionBkgColor: "#1f2937",
+            altSectionBkgColor: "#374151",
+            gridColor: "#4b5563",
+            secondaryColor: "#10b981",
+            tertiaryColor: "#f59e0b",
+          }
+        : {
+            primaryColor: "#3b82f6",
+            primaryTextColor: "#000000",
+            primaryBorderColor: "#1e40af",
+            lineColor: "#6b7280",
+            sectionBkgColor: "#f8fafc",
+            altSectionBkgColor: "#f1f5f9",
+            gridColor: "#e2e8f0",
+            secondaryColor: "#10b981",
+            tertiaryColor: "#f59e0b",
+          },
     });
 
     const codeBlocks = ref.current.querySelectorAll(
@@ -394,13 +407,13 @@ export default function TopicChatPage() {
               className={cn(
                 "group relative rounded-lg px-4 py-3 max-w-[85%] transition-all duration-200",
                 msg.role === "user"
-                  ? "bg-primary text-primary-foreground ml-auto shadow-sm"
-                  : "bg-card text-foreground mr-auto border shadow-sm hover:shadow-md"
+                  ? "bg-primary text-primary-foreground ml-auto shadow-sm dark:bg-primary/20"
+                  : "bg-card text-foreground mr-auto border shadow-sm hover:shadow-md dark:bg-card/50"
               )}
             >
               <div className="flex items-start gap-3">
                 {msg.role === "assistant" && (
-                  <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1 dark:bg-primary/20">
                     <span className="text-xs">🤖</span>
                   </div>
                 )}
@@ -434,10 +447,10 @@ export default function TopicChatPage() {
 
           {loading && (
             <div className="flex items-center gap-3 max-w-[85%] mr-auto">
-              <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-primary/20">
                 <span className="text-xs">🤖</span>
               </div>
-              <div className="bg-card border rounded-lg px-4 py-3 shadow-sm">
+              <div className="bg-card border rounded-lg px-4 py-3 shadow-sm dark:bg-card/50">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-sm text-muted-foreground">
@@ -453,7 +466,7 @@ export default function TopicChatPage() {
 
         {/* PDF file preview (if any) */}
         {pdfFile && (
-          <div className="absolute left-0 right-0 bottom-20 flex items-center gap-2 p-2 bg-primary/5 rounded border mx-2 z-10">
+          <div className="absolute left-0 right-0 bottom-20 flex items-center gap-2 p-2 bg-primary/5 rounded border mx-2 z-10 dark:bg-primary/10">
             <FileText className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium truncate max-w-xs">
               {pdfFile.name}
@@ -471,7 +484,7 @@ export default function TopicChatPage() {
 
         {/* Chat input fixed at bottom */}
         <form
-          className="sticky bottom-0 left-0 right-0 flex gap-2 items-end p-2 border rounded-t-lg bg-card shadow-sm z-20"
+          className="sticky bottom-0 left-0 right-0 flex gap-2 items-end p-2 border rounded-t-lg bg-card shadow-sm z-20 dark:bg-card/50"
           onSubmit={(e) => {
             e.preventDefault();
             if (!loading && input.trim()) sendMessage(input);

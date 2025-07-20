@@ -38,7 +38,7 @@ async function getOrCreateUser(clerkUserId: string) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -53,8 +53,9 @@ export async function GET(
     const user = await getOrCreateUser(userId);
 
     // Find topic (ensure it belongs to the user)
+    const { id } = await params;
     const topic = await Topic.findOne({
-      id: (await params).id,
+      id: id,
       userId: user._id,
     });
 
@@ -74,7 +75,7 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -89,8 +90,9 @@ export async function DELETE(
     const user = await getOrCreateUser(userId);
 
     // Find and delete topic (ensure it belongs to the user)
+    const { id } = await params;
     const topic = await Topic.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       userId: user._id,
     });
 

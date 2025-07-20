@@ -103,7 +103,7 @@ export const TopicTable = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-14 bg-background text-foreground">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-14 bg-background text-foreground dark:bg-background/50 dark:text-foreground">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">My Topics</h1>
         <Button variant="outline" onClick={() => setIsOpen(true)}>

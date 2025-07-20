@@ -24,14 +24,14 @@ export async function POST(req: Request) {
   const payload = await req.text();
   const wh = new Webhook(SIGNIN_SECRET);
 
-  let evt: { type: string; data: any };
+  let evt: { type: string; data: Record<string, unknown> };
 
   try {
     evt = wh.verify(payload, {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
-    }) as { type: string; data: any };
+    }) as { type: string; data: Record<string, unknown> };
   } catch (err) {
     console.error("Error verifying webhook:", err);
     return new Response("Error occured", {
@@ -42,8 +42,16 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === "user.created" || eventType === "user.updated") {
+    const data = evt.data as {
+      id: string;
+      email_addresses: Array<{ email_address: string }>;
+      first_name: string;
+      last_name: string;
+      image_url: string;
+      username: string;
+    };
     const { id, email_addresses, first_name, last_name, image_url, username } =
-      evt.data;
+      data;
 
     try {
       await connectDb();

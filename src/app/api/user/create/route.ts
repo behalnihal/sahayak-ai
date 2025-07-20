@@ -1,24 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { connectDb } from "@/lib/mongodb";
 import User from "@/models/User";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDb();
 
     // Check if user already exists
     let user = await User.findOne({ clerkId: userId });
-    
+
     if (user) {
       return NextResponse.json(
         { message: "User already exists", user },
@@ -28,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     // Get user data from Clerk
     const clerkUser = await currentUser();
-    
+
     if (!clerkUser) {
       return NextResponse.json(
         { error: "Could not get user data from Clerk" },
@@ -61,4 +58,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

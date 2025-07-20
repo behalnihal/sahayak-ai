@@ -30,7 +30,7 @@ export const Hero = () => {
   const { isSignedIn } = useUser();
   return (
     <motion.div
-      className="relative z-10 flex flex-col items-center justify-start min-h-screen space-y-4 px-4 pt-32 pb-12"
+      className="relative z-10 flex flex-col items-center justify-start min-h-screen space-y-6 px-6 pt-32 pb-24"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -65,7 +65,7 @@ export const Hero = () => {
         effectively.
       </motion.h2>
 
-      <motion.div variants={itemVariants} className="z-20 py-20">
+      <motion.div variants={itemVariants} className="z-20 py-16">
         <Link href={isSignedIn ? "/dashboard" : "/sign-in"}>
           <Button className=" rounded-full">
             Get Started
