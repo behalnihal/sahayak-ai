@@ -1,5 +1,5 @@
 "use client";
-import { EditIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { EditIcon, PlusIcon, TrashIcon, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Table,
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,127 +20,195 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "../ui/input";
 import Link from "next/link";
-import { v4 as uuidv4 } from "uuid";
 
 interface Topic {
+  _id: string;
   id: string;
-  name: string;
-  status: boolean;
-  progress: number;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const TopicTable = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [topics, setTopics] = useState<Topic[]>([
-    // Example topics for demonstration
-    { id: uuidv4(), name: "React Basics", status: true, progress: 60 },
-    { id: uuidv4(), name: "Node.js", status: false, progress: 30 },
-    { id: uuidv4(), name: "Machine Learning", status: true, progress: 80 },
-  ]);
-  const [newTopic, setNewTopic] = useState<Topic>({
-    id: uuidv4(),
-    name: "",
-    status: false,
-    progress: 0,
-  });
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [newTopicTitle, setNewTopicTitle] = useState("");
+
+  useEffect(() => {
+    fetchTopics();
+  }, []);
+
+  const fetchTopics = async () => {
+    try {
+      const response = await fetch("/api/topics");
+      if (response.ok) {
+        const data = await response.json();
+        setTopics(data.topics || []);
+      }
+    } catch (error) {
+      console.error("Error fetching topics:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createTopic = async () => {
+    if (!newTopicTitle.trim()) return;
+
+    setCreating(true);
+    try {
+      const response = await fetch("/api/topics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTopicTitle }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTopics([data.topic, ...topics]);
+        setNewTopicTitle("");
+        setIsOpen(false);
+      }
+    } catch (error) {
+      console.error("Error creating topic:", error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const deleteTopic = async (topicId: string) => {
+    try {
+      const response = await fetch(`/api/topics/${topicId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setTopics(topics.filter((t) => t._id !== topicId));
+      }
+    } catch (error) {
+      console.error("Error deleting topic:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-14 bg-background text-foreground">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-14 bg-background text-foreground">
-      <span className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          onClick={() => {
-            setIsOpen(true);
-          }}
-        >
-          <PlusIcon className="w-4 h-4" />
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">My Topics</h1>
+        <Button variant="outline" onClick={() => setIsOpen(true)}>
+          <PlusIcon className="w-4 h-4 mr-2" />
           New Topic
         </Button>
-      </span>
-      <Table className="rounded-2xl border">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Topic</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Progress</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {topics.map((topic, index) => (
-            <TableRow
-              key={topic.id}
-              className="hover:bg-muted/50 cursor-pointer"
-            >
-              <TableCell>
-                <Link
-                  href={`/dashboard/chat/${topic.id}`}
-                  className="text-primary underline"
-                >
-                  {topic.name}
-                </Link>
-              </TableCell>
-              <TableCell>{topic.status ? "Active" : "Inactive"}</TableCell>
-              <TableCell>{topic.progress}%</TableCell>
-              <TableCell className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2 mr-2"
-                  onClick={() => {
-                    // edit topic
-                    setIsOpen(true);
-                  }}
-                >
-                  <EditIcon className="w-4 h-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    // delete topic
-                    setTopics(topics.filter((t) => t.id !== topic.id));
-                  }}
-                >
-                  <TrashIcon className="w-4 h-4" />
-                  Delete
-                </Button>
-              </TableCell>
+      </div>
+
+      {topics.length === 0 ? (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium mb-2">No topics yet</h3>
+          <p className="text-muted-foreground mb-4">
+            Create your first topic to get started with learning.
+          </p>
+          <Button onClick={() => setIsOpen(true)}>
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Create Topic
+          </Button>
+        </div>
+      ) : (
+        <Table className="rounded-2xl border">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Topic</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {topics.map((topic) => (
+              <TableRow
+                key={topic._id}
+                className="hover:bg-muted/50 cursor-pointer"
+              >
+                <TableCell>
+                  <Link
+                    href={`/dashboard/chat/${topic.id}`}
+                    className="text-primary underline font-medium"
+                  >
+                    {topic.title}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  {new Date(topic.createdAt).toLocaleDateString()}
+                </TableCell>
+                <TableCell className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // TODO: Implement edit functionality
+                    }}
+                  >
+                    <EditIcon className="w-4 h-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteTopic(topic._id)}
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New Topic</DialogTitle>
+            <DialogTitle>Create New Topic</DialogTitle>
             <DialogDescription>
-              Create a new topic to get started.
+              Create a new topic to start learning about it.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <Input
               type="text"
-              placeholder="Eg. JavaScript"
-              value={newTopic.name}
-              onChange={(e) =>
-                setNewTopic({ ...newTopic, name: e.target.value })
-              }
+              placeholder="e.g., JavaScript Fundamentals"
+              value={newTopicTitle}
+              onChange={(e) => setNewTopicTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !creating) {
+                  createTopic();
+                }
+              }}
             />
           </div>
           <DialogFooter>
             <Button
-              onClick={() => {
-                setIsOpen(false);
-                setTopics([...topics, { ...newTopic, id: uuidv4() }]);
-                setNewTopic({
-                  id: uuidv4(),
-                  name: "",
-                  status: false,
-                  progress: 0,
-                });
-              }}
+              onClick={createTopic}
+              disabled={creating || !newTopicTitle.trim()}
             >
-              Create
+              {creating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Topic"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

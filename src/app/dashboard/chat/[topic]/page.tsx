@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,52 +16,21 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import mermaid from "mermaid";
-import { Send, Upload, FileText, Loader2, Copy, RefreshCw } from "lucide-react";
-
+import {
+  Send,
+  Upload,
+  FileText,
+  Loader2,
+  Copy,
+  RefreshCw,
+  HelpCircle,
+} from "lucide-react";
+import { PREBUILT_PROMPTS, QA_PROMPT } from "@/lib/prompts";
 interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp?: Date;
 }
-
-const PREBUILT_PROMPTS = [
-  {
-    label: "Create Mindmap",
-    icon: "🧠",
-    prompt: (topic: string) =>
-      `Generate a comprehensive mindmap for the topic '${topic}' using mermaidjs mindmap syntax. Include key concepts, subtopics, and relationships. Only output a mermaid code block, nothing else.`,
-  },
-  {
-    label: "Create Quiz",
-    icon: "📝",
-    prompt: (topic: string) =>
-      `Generate a quiz of 5 multiple choice questions (MCQs) about '${topic}'. Include explanations for correct answers. Output in markdown format.`,
-  },
-  {
-    label: "Summarize This",
-    icon: "📋",
-    prompt: (topic: string) =>
-      `Write a comprehensive summary of '${topic}' covering key points, important concepts, and practical applications. Use markdown format with proper headings.`,
-  },
-  {
-    label: "Explain Simply",
-    icon: "💡",
-    prompt: (topic: string) =>
-      `Explain '${topic}' in simple terms that a beginner can understand. Use analogies and examples where helpful.`,
-  },
-  {
-    label: "Key Facts",
-    icon: "🔑",
-    prompt: (topic: string) =>
-      `List the most important facts and key points about '${topic}' in bullet format.`,
-  },
-  {
-    label: "Study Guide",
-    icon: "📚",
-    prompt: (topic: string) =>
-      `Create a comprehensive study guide for '${topic}' with main concepts, definitions, and study tips.`,
-  },
-];
 
 // Enhanced MarkdownWithMermaid component
 function MarkdownWithMermaid({ content }: { content: string }) {
@@ -144,17 +113,11 @@ function FooterHider() {
   return null;
 }
 
-// Add a static topic list for demonstration (should be shared or fetched in a real app)
-const TOPIC_LIST = [
-  { id: "1", name: "React Basics" },
-  { id: "2", name: "Node.js" },
-  { id: "3", name: "Machine Learning" },
-];
-
 export default function TopicChatPage() {
   const { topic: topicId } = useParams();
-  const topicObj = TOPIC_LIST.find((t) => t.id === topicId) || { name: "Unknown Topic" };
-  const topicName = topicObj.name;
+  const router = useRouter();
+  const [topicName, setTopicName] = useState("Loading...");
+  const [topicLoading, setTopicLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -170,9 +133,46 @@ export default function TopicChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch topic data
+  useEffect(() => {
+    const fetchTopic = async () => {
+      try {
+        const response = await fetch(`/api/topics/${topicId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setTopicName(data.topic.title);
+        } else {
+          setTopicName("Unknown Topic");
+        }
+      } catch (error) {
+        console.error("Error fetching topic:", error);
+        setTopicName("Unknown Topic");
+      } finally {
+        setTopicLoading(false);
+      }
+    };
+
+    if (topicId) {
+      fetchTopic();
+    }
+  }, [topicId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Update initial message when topic name is loaded
+  useEffect(() => {
+    if (!topicLoading && topicName !== "Loading...") {
+      setMessages([
+        {
+          role: "assistant",
+          content: `Hi! I'm here to help you learn about **${topicName}**. You can ask me anything, request explanations, create study materials, or upload a PDF for additional context. What would you like to explore first?`,
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  }, [topicName, topicLoading]);
 
   const sendMessage = async (prompt: string, displayText?: string) => {
     if (!prompt.trim()) return;
@@ -189,7 +189,7 @@ export default function TopicChatPage() {
     setError(null);
 
     try {
-      const fullPrompt = `Topic: ${topicName}\n\n${prompt}`;
+      const fullPrompt = QA_PROMPT(topicName, prompt);
       const res = await fetch("/api/response", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -295,6 +295,15 @@ export default function TopicChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/dashboard/quiz/${topicId}`)}
+              className="gap-2"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Take Quiz
+            </Button>
             <Button
               variant="outline"
               size="sm"

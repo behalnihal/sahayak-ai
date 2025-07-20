@@ -1,40 +1,36 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 
-const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/sahayak-ai";
+const MONGODB_URI = process.env.MONGODB_URI;
 
+interface MongooseConnection {
+  conn: Mongoose | null;
+  promise: Promise<Mongoose> | null;
+}
 if (!MONGODB_URI) {
-  throw new Error(
-    "Please define the MONGODB_URI environment variable inside .env.local"
-  );
+  throw new Error("MONGODB_URI is not defined");
 }
 
-declare global {
-  // eslint-disable-next-line no-var
-  var mongoose:
-    | { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null }
-    | undefined;
-}
+let cached: MongooseConnection = (
+  global as typeof globalThis & { mongoose?: MongooseConnection }
+).mongoose || { conn: null, promise: null };
 
-let cached = global.mongoose as
-  | { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null }
-  | undefined;
 if (!cached) {
-  cached = { conn: null, promise: null };
-  global.mongoose = cached;
+  cached = (
+    global as typeof globalThis & { mongoose?: MongooseConnection }
+  ).mongoose = { conn: null, promise: null };
 }
 
-async function dbConnect() {
-  if (cached!.conn) {
-    return cached!.conn;
-  }
-  if (!cached!.promise) {
-    cached!.promise = mongoose.connect(MONGODB_URI, {
+export const connectDb = async () => {
+  if (cached.conn) return cached.conn;
+  if (!MONGODB_URI) throw new Error("MONGODB_URI is not defined");
+
+  cached.promise =
+    cached.promise ||
+    mongoose.connect(MONGODB_URI, {
+      dbName: "sahayak-ai",
       bufferCommands: false,
     });
-  }
-  cached!.conn = await cached!.promise;
-  return cached!.conn;
-}
 
-export default dbConnect;
+  cached.conn = await cached.promise;
+  return cached.conn;
+};

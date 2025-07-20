@@ -9,6 +9,7 @@ import { NumberTicker } from "../magicui/number-ticker";
 import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 import { Button } from "../ui/button";
+import { useUser } from "@clerk/nextjs";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,6 +27,7 @@ const itemVariants = {
 };
 
 export const Hero = () => {
+  const { isSignedIn } = useUser();
   return (
     <motion.div
       className="relative z-10 flex flex-col items-center justify-start min-h-screen space-y-4 px-4 pt-32 pb-12"
@@ -64,7 +66,7 @@ export const Hero = () => {
       </motion.h2>
 
       <motion.div variants={itemVariants} className="z-20 py-20">
-        <Link href="/dashboard">
+        <Link href={isSignedIn ? "/dashboard" : "/sign-in"}>
           <Button className=" rounded-full">
             Get Started
             <ArrowRightIcon className="w-8 h-8 transform transition-transform duration-300 group-hover:translate-x-1" />
