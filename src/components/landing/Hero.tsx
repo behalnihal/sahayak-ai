@@ -65,7 +65,7 @@ export const Hero = () => {
       </motion.h2>
 
       <motion.div variants={itemVariants} className="z-20 py-16">
-        <Link href={isSignedIn ? "/dashboard" : "/sign-in"}>
+        <Link href={isSignedIn ? "/dashboard" : "/sign-up"}>
           <Button className=" rounded-full">
             Get Started
             <ArrowRightIcon className="w-8 h-8 transform transition-transform duration-300 group-hover:translate-x-1" />
