@@ -35,9 +35,11 @@ export const TopicTable = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newTopicTitle, setNewTopicTitle] = useState("");
+  const [tokens, setTokens] = useState<number | null>(null);
 
   useEffect(() => {
     fetchTopics();
+    fetchTokens();
   }, []);
 
   const fetchTopics = async () => {
@@ -47,8 +49,8 @@ export const TopicTable = () => {
         const data = await response.json();
         setTopics(data.topics || []);
       }
-    } catch (error) {
-      console.error("Error fetching topics:", error);
+    } catch {
+      console.error("Error fetching topics:");
     } finally {
       setLoading(false);
     }
@@ -71,8 +73,8 @@ export const TopicTable = () => {
         setNewTopicTitle("");
         setIsOpen(false);
       }
-    } catch (error) {
-      console.error("Error creating topic:", error);
+    } catch {
+      console.error("Error creating topic:");
     } finally {
       setCreating(false);
     }
@@ -87,8 +89,22 @@ export const TopicTable = () => {
       if (response.ok) {
         setTopics(topics.filter((t) => t._id !== topicId));
       }
-    } catch (error) {
-      console.error("Error deleting topic:", error);
+    } catch {
+      console.error("Error deleting topic:");
+    }
+  };
+
+  const fetchTokens = async () => {
+    try {
+      const response = await fetch("/api/user/tokens");
+      if (response.ok) {
+        const data = await response.json();
+        setTokens(data.tokens);
+        console.log(data.tokens);
+      }
+    } catch (err) {
+      console.error("Error fetching tokens:", err);
+      setTokens(null);
     }
   };
 
@@ -106,10 +122,17 @@ export const TopicTable = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-14 bg-background text-foreground dark:bg-background/50 dark:text-foreground">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">My Topics</h1>
-        <Button variant="outline" onClick={() => setIsOpen(true)}>
-          <PlusIcon className="w-4 h-4 mr-2" />
-          New Topic
-        </Button>
+        <div className="flex items-center gap-4">
+          {tokens !== null && (
+            <span className="text-sm font-medium bg-muted px-3 py-1 rounded-full border">
+              Tokens left: {tokens}
+            </span>
+          )}
+          <Button variant="outline" onClick={() => setIsOpen(true)}>
+            <PlusIcon className="w-4 h-4 mr-2" />
+            New Topic
+          </Button>
+        </div>
       </div>
 
       {topics.length === 0 ? (

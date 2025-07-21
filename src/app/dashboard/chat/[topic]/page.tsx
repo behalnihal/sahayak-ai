@@ -35,9 +35,14 @@ interface Message {
 // Enhanced MarkdownWithMermaid component
 function MarkdownWithMermaid({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (!ref.current) return;
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || !ref.current) return;
 
     // Initialize mermaid with theme-aware colors
     const isDark = document.documentElement.classList.contains("dark");
@@ -79,17 +84,24 @@ function MarkdownWithMermaid({ content }: { content: string }) {
 
       const code = block.textContent || "";
       try {
+        // Only use Math.random on client
         const id = `mermaid-${i}-${Math.random().toString(36).slice(2)}`;
         const { svg } = await mermaid.render(id, code);
         const temp = document.createElement("div");
         temp.innerHTML = svg;
         temp.className = "flex justify-center my-4";
-        parent.replaceWith(temp);
+        try {
+          if (parent.parentNode) {
+            parent.replaceWith(temp);
+          }
+        } catch {
+          // Suppress DOM errors caused by React re-rendering
+        }
       } catch (e) {
         console.warn("Mermaid rendering failed:", e);
       }
     });
-  }, [content]);
+  }, [content, isClient]);
 
   return (
     <div ref={ref} className="markdown-body">
@@ -98,10 +110,13 @@ function MarkdownWithMermaid({ content }: { content: string }) {
         components={{
           code({ className, children, ...props }) {
             if (className === "language-mermaid") {
-              return (
+              // On server, render a placeholder; on client, will be replaced by SVG
+              return isClient ? (
                 <pre>
                   <code className="language-mermaid">{children}</code>
                 </pre>
+              ) : (
+                <div style={{ minHeight: 40 }} />
               );
             }
             return (
@@ -145,6 +160,7 @@ export default function TopicChatPage() {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tokens, setTokens] = useState<number | null>(null);
 
   // Fetch topic data
   useEffect(() => {
@@ -167,6 +183,7 @@ export default function TopicChatPage() {
 
     if (topicId) {
       fetchTopic();
+      fetchTokens();
     }
   }, [topicId]);
 
@@ -186,6 +203,18 @@ export default function TopicChatPage() {
       ]);
     }
   }, [topicName, topicLoading]);
+
+  const fetchTokens = async () => {
+    try {
+      const response = await fetch("/api/user/tokens");
+      if (response.ok) {
+        const data = await response.json();
+        setTokens(data.tokens);
+      }
+    } catch {
+      setTokens(null);
+    }
+  };
 
   const sendMessage = async (prompt: string, displayText?: string) => {
     if (!prompt.trim()) return;
@@ -221,6 +250,7 @@ export default function TopicChatPage() {
       };
 
       setMessages((msgs) => [...msgs, assistantMessage]);
+      if (typeof data.tokens === "number") setTokens(data.tokens);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
@@ -305,6 +335,11 @@ export default function TopicChatPage() {
               <p className="text-sm text-muted-foreground">
                 AI-powered study assistant
               </p>
+              {tokens !== null && (
+                <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full border mt-1 inline-block">
+                  Tokens left: {tokens}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { QUIZ_PROMPT } from "@/lib/prompts";
+import { auth } from "@clerk/nextjs/server";
+import { decrementUserTokens } from "@/lib/actions/user.actions";
 
 interface QuizQuestion {
   question: string;
@@ -16,6 +18,16 @@ interface Quiz {
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    // Decrement tokens, throw if none left
+    const tokens = await decrementUserTokens(userId);
+    if (tokens === undefined) {
+      return NextResponse.json({ error: "No tokens left" }, { status: 429 });
+    }
+
     const { topic } = await req.json();
 
     if (!topic) {
@@ -77,8 +89,8 @@ export async function POST(req: NextRequest) {
       topic: topic,
     };
 
-    return NextResponse.json({ quiz });
-  } catch (error) {
+    return NextResponse.json({ quiz, tokens });
+  } catch (error: unknown) {
     console.error("Quiz generation error:", error);
     return NextResponse.json(
       { error: "Failed to generate quiz" },

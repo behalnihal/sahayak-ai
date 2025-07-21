@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    tokens: {
+      type: Number,
+      required: true,
+      default: 20,
+    },
   },
   { timestamps: true }
 );

@@ -62,7 +62,7 @@ export function AnimatedGridPattern({
         pos: getPos(),
       }));
     },
-    [dimensions.width, dimensions.height]
+    [getPos]
   );
 
   // Function to update a single square's position

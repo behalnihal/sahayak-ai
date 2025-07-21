@@ -60,9 +60,8 @@ export const Hero = () => {
         className="mt-2 text-base md:text-xl text-muted-foreground tracking-normal text-center max-w-2xl mx-auto z-10"
         variants={itemVariants}
       >
-        Upload your YouTube videos & PDF notes to get instant summaries, mind
-        maps, take MCQ tests, and retain <NumberTicker value={100} />% more
-        effectively.
+        Get instant summaries, mind maps, take MCQ tests, and retain{" "}
+        <NumberTicker value={100} />% more effectively.
       </motion.h2>
 
       <motion.div variants={itemVariants} className="z-20 py-16">

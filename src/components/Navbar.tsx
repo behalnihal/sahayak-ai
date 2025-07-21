@@ -1,5 +1,4 @@
 import { FaBrain, FaGithub } from "react-icons/fa";
-import { ModeToggle } from "./mode-toggle";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 export const Navbar = () => {
@@ -17,7 +16,6 @@ export const Navbar = () => {
               <FaGithub className="w-5 h-5" />
             </a>
 
-            <ModeToggle />
             <UserButton />
           </div>
         </div>

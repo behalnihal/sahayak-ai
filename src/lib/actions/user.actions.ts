@@ -12,6 +12,7 @@ declare type CreateUserParams = {
   firstName: string;
   lastName: string;
   photo: string;
+  tokens?: number;
 };
 
 declare type UpdateUserParams = {
@@ -24,7 +25,7 @@ declare type UpdateUserParams = {
 export async function createUser(user: CreateUserParams) {
   try {
     await connectDb();
-    const newUser = await User.create(user);
+    const newUser = await User.create({ ...user, tokens: 20 });
     return JSON.parse(JSON.stringify(newUser));
   } catch (err) {
     handleError(err);
@@ -71,6 +72,31 @@ export async function deleteUser(clerkId: string) {
     revalidatePath("/");
 
     return deletedUser ? JSON.parse(JSON.stringify(deletedUser)) : null;
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+export async function decrementUserTokens(clerkId: string) {
+  try {
+    await connectDb();
+    const user = await User.findOne({ clerkId });
+    if (!user) throw new Error("User not found");
+    if (user.tokens <= 0) throw new Error("No tokens left");
+    user.tokens -= 1;
+    await user.save();
+    return user.tokens;
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+export async function getUserTokens(clerkId: string) {
+  try {
+    await connectDb();
+    const user = await User.findOne({ clerkId });
+    if (!user) throw new Error("User not found");
+    return user.tokens;
   } catch (error) {
     handleError(error);
   }
