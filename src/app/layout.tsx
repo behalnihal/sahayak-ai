@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sahayak AI",
   description: "Sahayak AI",
+  icons: {
+    icon: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

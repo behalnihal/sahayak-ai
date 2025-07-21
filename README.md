@@ -2,6 +2,10 @@
 
 Sahayak AI is a modern, minimalistic platform designed to help you learn and retain information more effectively. Upload your YouTube videos or PDF notes to generate instant summaries, mind maps, quizzes, and more—powered by AI.
 
+### Preivew
+
+![Preview](./public/sahayak.png)
+
 ## Features
 
 - Mindmap Generator: Visualize complex topics as interactive mind maps
