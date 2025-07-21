@@ -26,10 +26,14 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { PREBUILT_PROMPTS, QA_PROMPT } from "@/lib/prompts";
+import Mermaid from "@/components/mermaid/mermaid";
+import prepareMermaidCode from "@/lib/prepareMermaid";
 interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp?: Date;
+  type?: "mindmap"; // Added for mindmap messages
+  id?: string; // Added for Mermaid component
 }
 
 // Enhanced MarkdownWithMermaid component
@@ -219,6 +223,14 @@ export default function TopicChatPage() {
   const sendMessage = async (prompt: string, displayText?: string) => {
     if (!prompt.trim()) return;
 
+    // Check if user has tokens before proceeding
+    if (tokens !== null && tokens <= 0) {
+      setError(
+        "You have no tokens left. Please get more tokens to continue chatting."
+      );
+      return;
+    }
+
     const userMessage: Message = {
       role: "user",
       content: displayText || prompt,
@@ -238,15 +250,35 @@ export default function TopicChatPage() {
         body: JSON.stringify({ prompt: fullPrompt }),
       });
 
+      if (res.status === 429) {
+        // Specific handling for no tokens
+        setError(
+          "You have no tokens left. Please get more tokens to continue chatting."
+        );
+        setTokens(0);
+        return;
+      }
+
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 
       const data = await res.json();
+
+      // Detect if this is a mindmap response
+      const isMindmap =
+        data.response.includes("graph TD") ||
+        data.response.includes("graph LR") ||
+        data.response.includes("```mermaid");
+
       const assistantMessage: Message = {
         role: "assistant",
         content: data.response,
         timestamp: new Date(),
+        ...(isMindmap && {
+          type: "mindmap" as const,
+          id: `mindmap-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        }),
       };
 
       setMessages((msgs) => [...msgs, assistantMessage]);
@@ -379,7 +411,7 @@ export default function TopicChatPage() {
               variant="outline"
               size="sm"
               onClick={() => handlePrebuiltPrompt(prompt)}
-              disabled={loading}
+              disabled={loading || (tokens !== null && tokens <= 0)}
               className="gap-2"
             >
               <span>{prompt.icon}</span>
@@ -409,7 +441,7 @@ export default function TopicChatPage() {
                       handlePrebuiltPrompt(prompt);
                       setShowPromptDialog(false);
                     }}
-                    disabled={loading}
+                    disabled={loading || (tokens !== null && tokens <= 0)}
                     className="h-auto p-3 flex flex-col gap-1"
                   >
                     <span className="text-lg">{prompt.icon}</span>
@@ -453,16 +485,18 @@ export default function TopicChatPage() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  {msg.role === "assistant" ? (
+                  {/* Mermaid mindmap rendering */}
+                  {msg.role === "assistant" && msg.type === "mindmap" ? (
+                    <Mermaid
+                      id={msg.id || `mermaid-${idx}`}
+                      chart={prepareMermaidCode({ code: msg.content })}
+                      key={msg.id || `mermaid-${idx}`}
+                    />
+                  ) : msg.role === "assistant" ? (
                     <MarkdownWithMermaid content={msg.content} />
                   ) : (
                     <div className="whitespace-pre-wrap break-words">
                       {msg.content}
-                    </div>
-                  )}
-                  {msg.timestamp && (
-                    <div className="text-xs opacity-50 mt-2">
-                      {msg.timestamp.toLocaleTimeString()}
                     </div>
                   )}
                 </div>
@@ -528,11 +562,15 @@ export default function TopicChatPage() {
         >
           <div className="flex-1 flex items-center gap-2">
             <Input
-              placeholder={`Ask me anything about ${topicName}...`}
+              placeholder={
+                tokens !== null && tokens <= 0
+                  ? "No tokens left to continue chatting..."
+                  : `Ask me anything about ${topicName}...`
+              }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
-              disabled={loading}
+              disabled={loading || (tokens !== null && tokens <= 0)}
               className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
             />
             <label className="cursor-pointer mb-0">
@@ -550,7 +588,9 @@ export default function TopicChatPage() {
           </div>
           <Button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={
+              loading || !input.trim() || (tokens !== null && tokens <= 0)
+            }
             size="sm"
             className="gap-2"
           >

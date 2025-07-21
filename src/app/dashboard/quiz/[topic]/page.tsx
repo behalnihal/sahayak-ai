@@ -51,6 +51,10 @@ export default function QuizPage() {
   const [topicName, setTopicName] = useState("Loading...");
   const [topicLoading, setTopicLoading] = useState(true);
 
+  const handleFinishQuiz = () => {
+    router.push(`/dashboard/chat/${topicId}?quiz=true`);
+  };
+
   // Fetch topic data
   useEffect(() => {
     const fetchTopic = async () => {
@@ -218,10 +222,7 @@ export default function QuizPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/dashboard/chat/${topicId}`)}
-          >
+          <Button variant="outline" onClick={handleFinishQuiz}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Chat
           </Button>
@@ -257,10 +258,7 @@ export default function QuizPage() {
                 <RefreshCw className="w-4 h-4" />
                 Retake Quiz
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/dashboard/chat/${topicId}`)}
-              >
+              <Button variant="outline" onClick={handleFinishQuiz}>
                 Back to Chat
               </Button>
             </div>
@@ -274,12 +272,9 @@ export default function QuizPage() {
   const progress = ((currentQuestion + 1) / quiz.questions.length) * 100;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-20">
       <div className="flex items-center justify-between mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.push(`/dashboard/chat/${topicId}`)}
-        >
+        <Button variant="outline" onClick={handleFinishQuiz}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Chat
         </Button>

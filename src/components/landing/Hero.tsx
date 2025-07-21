@@ -1,15 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AnimatedGridPattern } from "../magicui/animated-grid-pattern";
-import { cn } from "@/lib/utils";
 import { BlurFade } from "../magicui/blur-fade";
 import { SparklesText } from "../magicui/sparkles-text";
 import { NumberTicker } from "../magicui/number-ticker";
 import Link from "next/link";
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon, Brain } from "lucide-react";
 import { Button } from "../ui/button";
 import { useUser } from "@clerk/nextjs";
+import { DotPattern } from "../magicui/dot-pattern";
+import { cn } from "@/lib/utils";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -35,14 +35,17 @@ export const Hero = () => {
       initial="hidden"
       animate="visible"
     >
-      <AnimatedGridPattern
+      <DotPattern
         className={cn(
-          "absolute inset-0 z-0 [mask-image:radial-gradient(50vw_circle_at_center,white,transparent)] dark:[mask-image:radial-gradient(50vw_circle_at_center,black,transparent)]"
+          "[mask-image:radial-gradient(600px_circle_at_center,white,transparent)]"
         )}
       />
-      <span className="bg-muted px-4 py-1 rounded-full relative z-10 text-xs border-2 border-neutral-600">
-        🧠 | Learn Better
-      </span>
+      <div className="flex items-center gap-2">
+        <Brain className="w-4 h-4" />
+        <span className="bg-muted px-4 py-1 rounded-full relative z-10 text-xs border-2 border-neutral-600">
+          Learn Better
+        </span>
+      </div>
 
       <motion.div variants={itemVariants}>
         <BlurFade
