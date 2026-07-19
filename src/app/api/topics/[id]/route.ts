@@ -4,6 +4,14 @@ import { connectDb } from "@/lib/mongodb";
 import Topic from "@/models/Topic";
 import User from "@/models/User";
 
+type ChatMessageInput = {
+  role?: unknown;
+  content?: unknown;
+  timestamp?: unknown;
+  type?: unknown;
+  id?: unknown;
+};
+
 // Helper function to get or create user
 async function getOrCreateUser(clerkUserId: string) {
   let user = await User.findOne({ clerkId: clerkUserId });
@@ -68,6 +76,73 @@ export async function GET(
     console.error("Error fetching topic:", error);
     return NextResponse.json(
       { error: "Failed to fetch topic" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { messages } = await req.json();
+
+    if (!Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: "Messages must be an array" },
+        { status: 400 }
+      );
+    }
+
+    await connectDb();
+
+    const user = await getOrCreateUser(userId);
+    const { id } = await params;
+
+    const sanitizedMessages = messages
+      .filter((message: ChatMessageInput) => {
+        return (
+          message &&
+          (message.role === "user" || message.role === "assistant") &&
+          typeof message.content === "string" &&
+          message.content.trim().length > 0
+        );
+      })
+      .slice(-100)
+      .map((message: ChatMessageInput) => ({
+        role: message.role,
+        content: String(message.content),
+        timestamp:
+          typeof message.timestamp === "string" ||
+          message.timestamp instanceof Date
+            ? new Date(message.timestamp)
+            : new Date(),
+        ...(message.type === "mindmap" && { type: "mindmap" }),
+        ...(typeof message.id === "string" && { id: message.id }),
+      }));
+
+    const topic = await Topic.findOneAndUpdate(
+      { id, userId: user._id },
+      { messages: sanitizedMessages, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!topic) {
+      return NextResponse.json({ error: "Topic not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ messages: topic.messages });
+  } catch (error) {
+    console.error("Error saving topic messages:", error);
+    return NextResponse.json(
+      { error: "Failed to save messages" },
       { status: 500 }
     );
   }

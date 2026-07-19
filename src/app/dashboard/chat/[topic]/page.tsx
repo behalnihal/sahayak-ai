@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -24,19 +25,30 @@ import {
   Copy,
   RefreshCw,
   HelpCircle,
+  ArrowLeft,
+  Bot,
+  User,
+  Sparkles,
+  Check,
 } from "lucide-react";
 import { PREBUILT_PROMPTS, QA_PROMPT } from "@/lib/prompts";
 import Mermaid from "@/components/mermaid/mermaid";
 import prepareMermaidCode from "@/lib/prepareMermaid";
+import {
+  DashboardShell,
+  Surface,
+  TokenBadge,
+} from "@/components/dashboard/DashboardShell";
+import { ChatSidebar } from "@/components/dashboard/ChatSidebar";
+
 interface Message {
   role: "user" | "assistant";
   content: string;
-  timestamp?: Date;
-  type?: "mindmap"; // Added for mindmap messages
-  id?: string; // Added for Mermaid component
+  timestamp?: Date | string;
+  type?: "mindmap";
+  id?: string;
 }
 
-// Enhanced MarkdownWithMermaid component
 function MarkdownWithMermaid({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isClient, setIsClient] = useState(false);
@@ -48,7 +60,6 @@ function MarkdownWithMermaid({ content }: { content: string }) {
   useEffect(() => {
     if (!isClient || !ref.current) return;
 
-    // Initialize mermaid with theme-aware colors
     const isDark = document.documentElement.classList.contains("dark");
     mermaid.initialize({
       startOnLoad: false,
@@ -88,18 +99,17 @@ function MarkdownWithMermaid({ content }: { content: string }) {
 
       const code = block.textContent || "";
       try {
-        // Only use Math.random on client
         const id = `mermaid-${i}-${Math.random().toString(36).slice(2)}`;
         const { svg } = await mermaid.render(id, code);
         const temp = document.createElement("div");
         temp.innerHTML = svg;
-        temp.className = "flex justify-center my-4";
+        temp.className = "flex justify-center my-4 overflow-x-auto";
         try {
           if (parent.parentNode) {
             parent.replaceWith(temp);
           }
         } catch {
-          // Suppress DOM errors caused by React re-rendering
+          // React re-render race
         }
       } catch (e) {
         console.warn("Mermaid rendering failed:", e);
@@ -108,13 +118,12 @@ function MarkdownWithMermaid({ content }: { content: string }) {
   }, [content, isClient]);
 
   return (
-    <div ref={ref} className="markdown-body">
+    <div ref={ref} className="markdown-body text-sm sm:text-[0.95rem]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           code({ className, children, ...props }) {
             if (className === "language-mermaid") {
-              // On server, render a placeholder; on client, will be replaced by SVG
               return isClient ? (
                 <pre>
                   <code className="language-mermaid">{children}</code>
@@ -137,76 +146,102 @@ function MarkdownWithMermaid({ content }: { content: string }) {
   );
 }
 
-function FooterHider() {
-  if (typeof window !== "undefined") {
-    const footer = document.querySelector("footer");
-    if (footer) footer.style.display = "none";
-  }
-  return null;
+function welcomeMessage(topicName: string): Message {
+  return {
+    role: "assistant",
+    content: `Hi! I'm here to help you learn about **${topicName}**. Ask questions, generate study materials, or pick a quick tool below to get started.`,
+    timestamp: new Date(),
+  };
+}
+
+function normalizeMessages(value: unknown): Message[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const messages = value.filter((message): message is Message => {
+    return (
+      message &&
+      (message.role === "user" || message.role === "assistant") &&
+      typeof message.content === "string"
+    );
+  });
+
+  return messages.length > 0 ? messages : null;
 }
 
 export default function TopicChatPage() {
   const { topic: topicId } = useParams();
+  const topicKey = typeof topicId === "string" ? topicId : "";
   const router = useRouter();
   const [topicName, setTopicName] = useState("Loading...");
   const [topicLoading, setTopicLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: `Hi! I'm here to help you learn about **${topicName}**. You can ask me anything, request explanations, create study materials, or upload a PDF for additional context. What would you like to explore first?`,
-      timestamp: new Date(),
-    },
+    welcomeMessage("this topic"),
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPromptDialog, setShowPromptDialog] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tokens, setTokens] = useState<number | null>(null);
+  const [chatHydrated, setChatHydrated] = useState(false);
 
-  // Fetch topic data
   useEffect(() => {
     const fetchTopic = async () => {
       try {
-        const response = await fetch(`/api/topics/${topicId}`);
+        const response = await fetch(`/api/topics/${topicKey}`);
         if (response.ok) {
           const data = await response.json();
           setTopicName(data.topic.title);
+          setMessages(
+            normalizeMessages(data.topic.messages) ||
+              [welcomeMessage(data.topic.title)]
+          );
         } else {
           setTopicName("Unknown Topic");
+          setMessages([welcomeMessage("this topic")]);
         }
-      } catch (error) {
-        console.error("Error fetching topic:", error);
+      } catch (err) {
+        console.error("Error fetching topic:", err);
         setTopicName("Unknown Topic");
+        setMessages([welcomeMessage("this topic")]);
       } finally {
         setTopicLoading(false);
+        setChatHydrated(true);
       }
     };
 
-    if (topicId) {
+    if (topicKey) {
+      setTopicLoading(true);
+      setChatHydrated(false);
       fetchTopic();
       fetchTokens();
     }
-  }, [topicId]);
+  }, [topicKey]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
-  // Update initial message when topic name is loaded
   useEffect(() => {
-    if (!topicLoading && topicName !== "Loading...") {
-      setMessages([
-        {
-          role: "assistant",
-          content: `Hi! I'm here to help you learn about **${topicName}**. You can ask me anything, request explanations, create study materials, or upload a PDF for additional context. What would you like to explore first?`,
-          timestamp: new Date(),
-        },
-      ]);
-    }
-  }, [topicName, topicLoading]);
+    if (!chatHydrated || !topicKey || loading) return;
+
+    const saveMessages = async () => {
+      try {
+        await fetch(`/api/topics/${topicKey}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages }),
+        });
+      } catch (err) {
+        console.error("Error saving chat:", err);
+      }
+    };
+
+    saveMessages();
+  }, [chatHydrated, loading, messages, topicKey]);
 
   const fetchTokens = async () => {
     try {
@@ -223,7 +258,6 @@ export default function TopicChatPage() {
   const sendMessage = async (prompt: string, displayText?: string) => {
     if (!prompt.trim()) return;
 
-    // Check if user has tokens before proceeding
     if (tokens !== null && tokens <= 0) {
       setError(
         "You have no tokens left. Please get more tokens to continue chatting."
@@ -251,7 +285,6 @@ export default function TopicChatPage() {
       });
 
       if (res.status === 429) {
-        // Specific handling for no tokens
         setError(
           "You have no tokens left. Please get more tokens to continue chatting."
         );
@@ -265,7 +298,6 @@ export default function TopicChatPage() {
 
       const data = await res.json();
 
-      // Detect if this is a mindmap response
       const isMindmap =
         data.response.includes("graph TD") ||
         data.response.includes("graph LR") ||
@@ -288,14 +320,15 @@ export default function TopicChatPage() {
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(errorMessage);
 
-      const errorResponse: Message = {
-        role: "assistant",
-        content:
-          "I apologize, but I encountered an error while processing your request. Please try again or rephrase your question.",
-        timestamp: new Date(),
-      };
-
-      setMessages((msgs) => [...msgs, errorResponse]);
+      setMessages((msgs) => [
+        ...msgs,
+        {
+          role: "assistant",
+          content:
+            "I apologize, but I encountered an error while processing your request. Please try again or rephrase your question.",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -322,170 +355,197 @@ export default function TopicChatPage() {
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        // 10MB limit
         setError("File size must be less than 10MB.");
         return;
       }
       setPdfFile(file);
       setError(null);
-      // TODO: Implement PDF processing
     }
   };
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
     } catch (err) {
       console.error("Failed to copy text:", err);
     }
   };
 
   const clearChat = () => {
-    setMessages([
-      {
-        role: "assistant",
-        content: `Hi! I'm here to help you learn about **${topicName}**. You can ask me anything, request explanations, create study materials, or upload a PDF for additional context. What would you like to explore first?`,
-        timestamp: new Date(),
-      },
-    ]);
+    const resetMessages = [welcomeMessage(topicName)];
+    setMessages(resetMessages);
     setError(null);
   };
 
+  const noTokens = tokens !== null && tokens <= 0;
+
   return (
-    <div className="flex flex-col h-[100dvh] max-w-4xl mx-auto pt-20 px-4">
-      {/* Enhanced Header */}
-      <div className="mb-6 p-4 bg-card rounded-lg border shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-2xl">🎓</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Learning: {topicName}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                AI-powered study assistant
+    <DashboardShell fullHeight size="full" className="pb-4">
+      <div className="flex min-h-0 flex-1 gap-4">
+        <ChatSidebar />
+
+        <main className="flex min-w-0 flex-1 flex-col">
+      {/* Header */}
+      <Surface className="mb-3 shrink-0 px-3 py-3 sm:mb-4 sm:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mt-0.5 h-9 w-9 shrink-0"
+              onClick={() => router.push("/dashboard")}
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+                  {topicLoading ? "Loading…" : topicName}
+                </h1>
+                <TokenBadge tokens={tokens} />
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+                AI study chat · mind maps · summaries · quizzes
               </p>
-              {tokens !== null && (
-                <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full border mt-1 inline-block">
-                  Tokens left: {tokens}
-                </span>
-              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2 pl-12 sm:pl-0">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/dashboard/quiz/${topicId}`)}
-              className="gap-2"
+              onClick={() => router.push(`/dashboard/quiz/${topicKey}`)}
+              className="gap-1.5"
             >
-              <HelpCircle className="w-4 h-4" />
-              Take Quiz
+              <HelpCircle className="h-4 w-4" />
+              Quiz
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={clearChat}
-              className="gap-2"
+              className="gap-1.5"
             >
-              <RefreshCw className="w-4 h-4" />
-              Clear Chat
+              <RefreshCw className="h-4 w-4" />
+              Clear
             </Button>
           </div>
         </div>
+
         {error && (
-          <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive">
+          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </div>
         )}
-      </div>
+      </Surface>
 
-      {/* Quick Actions */}
-      <div className="mb-4">
-        <div className="flex flex-wrap gap-2 mb-2">
-          {PREBUILT_PROMPTS.slice(0, 3).map((prompt) => (
+      {/* Quick actions */}
+      <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 sm:mb-4">
+        {PREBUILT_PROMPTS.slice(0, 3).map((prompt) => (
+          <Button
+            key={prompt.label}
+            variant="outline"
+            size="sm"
+            onClick={() => handlePrebuiltPrompt(prompt)}
+            disabled={loading || noTokens}
+            className="gap-1.5 rounded-full bg-card/50"
+          >
+            <span aria-hidden>{prompt.icon}</span>
+            <span className="hidden sm:inline">{prompt.label}</span>
+            <span className="sm:hidden">{prompt.label.split(" ")[0]}</span>
+          </Button>
+        ))}
+
+        <Dialog open={showPromptDialog} onOpenChange={setShowPromptDialog}>
+          <DialogTrigger asChild>
             <Button
-              key={prompt.label}
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => handlePrebuiltPrompt(prompt)}
-              disabled={loading || (tokens !== null && tokens <= 0)}
-              className="gap-2"
+              className="gap-1.5 rounded-full"
+              disabled={loading || noTokens}
             >
-              <span>{prompt.icon}</span>
-              {prompt.label}
+              <Sparkles className="h-4 w-4" />
+              More tools
             </Button>
-          ))}
-          <Dialog open={showPromptDialog} onOpenChange={setShowPromptDialog}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <span>✨</span>
-                More Options
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Study Tools</DialogTitle>
-                <DialogDescription>
-                  Choose a study tool to get started with {topicName}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-2">
-                {PREBUILT_PROMPTS.map((prompt) => (
-                  <Button
-                    key={prompt.label}
-                    variant="outline"
-                    onClick={() => {
-                      handlePrebuiltPrompt(prompt);
-                      setShowPromptDialog(false);
-                    }}
-                    disabled={loading || (tokens !== null && tokens <= 0)}
-                    className="h-auto p-3 flex flex-col gap-1"
-                  >
-                    <span className="text-lg">{prompt.icon}</span>
-                    <span className="text-xs">{prompt.label}</span>
-                  </Button>
-                ))}
-              </div>
-              <DialogFooter>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Study tools</DialogTitle>
+              <DialogDescription>
+                Pick a tool to generate material for{" "}
+                <span className="font-medium text-foreground">{topicName}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-2">
+              {PREBUILT_PROMPTS.map((prompt) => (
                 <Button
-                  variant="secondary"
-                  onClick={() => setShowPromptDialog(false)}
+                  key={prompt.label}
+                  variant="outline"
+                  onClick={() => {
+                    handlePrebuiltPrompt(prompt);
+                    setShowPromptDialog(false);
+                  }}
+                  disabled={loading || noTokens}
+                  className="h-auto flex-col gap-1.5 p-4"
                 >
-                  Close
+                  <span className="text-lg">{prompt.icon}</span>
+                  <span className="text-xs font-medium">{prompt.label}</span>
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="secondary"
+                onClick={() => setShowPromptDialog(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Chat area and input fixed at bottom */}
-      <div className="relative flex-1 flex flex-col min-h-0">
-        <div
-          className="flex-1 overflow-y-auto space-y-4 pb-4"
-          style={{ minHeight: 0 }}
-        >
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                "group relative rounded-lg px-4 py-3 max-w-[85%] transition-all duration-200",
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground ml-auto shadow-sm dark:bg-primary/20"
-                  : "bg-card text-foreground mr-auto border shadow-sm hover:shadow-md dark:bg-card/50"
-              )}
-            >
-              <div className="flex items-start gap-3">
-                {msg.role === "assistant" && (
-                  <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1 dark:bg-primary/20">
-                    <span className="text-xs">🤖</span>
-                  </div>
+      {/* Messages + composer */}
+      <Surface className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
+          {messages.map((msg, idx) => {
+            const msgId = msg.id || `msg-${idx}`;
+            const isUser = msg.role === "user";
+
+            return (
+              <div
+                key={msgId}
+                className={cn(
+                  "flex gap-2.5 sm:gap-3",
+                  isUser ? "flex-row-reverse" : "flex-row"
                 )}
-                <div className="flex-1 min-w-0">
-                  {/* Mermaid mindmap rendering */}
+              >
+                <div
+                  className={cn(
+                    "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
+                    isUser
+                      ? "border-primary/20 bg-primary/15 text-primary"
+                      : "border-border/60 bg-muted/50 text-muted-foreground"
+                  )}
+                >
+                  {isUser ? (
+                    <User className="h-4 w-4" />
+                  ) : (
+                    <Bot className="h-4 w-4" />
+                  )}
+                </div>
+
+                <div
+                  className={cn(
+                    "group relative max-w-[min(100%,42rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:px-4 sm:py-3",
+                    isUser
+                      ? "rounded-tr-md bg-primary text-primary-foreground"
+                      : "rounded-tl-md border border-border/50 bg-background/60"
+                  )}
+                >
                   {msg.role === "assistant" && msg.type === "mindmap" ? (
                     <Mermaid
                       id={msg.id || `mermaid-${idx}`}
@@ -495,36 +555,40 @@ export default function TopicChatPage() {
                   ) : msg.role === "assistant" ? (
                     <MarkdownWithMermaid content={msg.content} />
                   ) : (
-                    <div className="whitespace-pre-wrap break-words">
+                    <div className="whitespace-pre-wrap break-words leading-relaxed">
                       {msg.content}
                     </div>
                   )}
+
+                  {msg.role === "assistant" && msg.type !== "mindmap" && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => copyToClipboard(msg.content, msgId)}
+                      className="absolute -right-1 -top-1 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                      aria-label="Copy message"
+                    >
+                      {copiedId === msgId ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  )}
                 </div>
-                {msg.role === "assistant" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(msg.content)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {loading && (
-            <div className="flex items-center gap-3 max-w-[85%] mr-auto">
-              <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-primary/20">
-                <span className="text-xs">🤖</span>
+            <div className="flex gap-2.5 sm:gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/50 text-muted-foreground">
+                <Bot className="h-4 w-4" />
               </div>
-              <div className="bg-card border rounded-lg px-4 py-3 shadow-sm dark:bg-card/50">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">
-                    Thinking...
-                  </span>
+              <div className="rounded-2xl rounded-tl-md border border-border/50 bg-background/60 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Thinking…
                 </div>
               </div>
             </div>
@@ -533,77 +597,83 @@ export default function TopicChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* PDF file preview (if any) */}
+        {/* PDF chip */}
         {pdfFile && (
-          <div className="absolute left-0 right-0 bottom-20 flex items-center gap-2 p-2 bg-primary/5 rounded border mx-2 z-10 dark:bg-primary/10">
-            <FileText className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium truncate max-w-xs">
-              {pdfFile.name}
-            </span>
+          <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 sm:mx-4">
+            <FileText className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate text-sm font-medium">{pdfFile.name}</span>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setPdfFile(null)}
               className="ml-auto h-6 w-6 p-0"
+              aria-label="Remove file"
             >
               ×
             </Button>
           </div>
         )}
 
-        {/* Chat input fixed at bottom */}
+        {/* Composer */}
         <form
-          className="sticky bottom-0 left-0 right-0 flex gap-2 items-end p-2 border rounded-t-lg bg-card shadow-sm z-20 dark:bg-card/50"
+          className="border-t border-border/50 bg-card/40 p-3 sm:p-4"
           onSubmit={(e) => {
             e.preventDefault();
             if (!loading && input.trim()) sendMessage(input);
           }}
-          style={{ background: "var(--card)" }}
         >
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex items-end gap-2 rounded-xl border border-border/60 bg-background/70 p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-ring/30">
             <Input
               placeholder={
-                tokens !== null && tokens <= 0
-                  ? "No tokens left to continue chatting..."
-                  : `Ask me anything about ${topicName}...`
+                noTokens
+                  ? "No tokens left…"
+                  : `Ask anything about ${topicLoading ? "this topic" : topicName}…`
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
-              disabled={loading || (tokens !== null && tokens <= 0)}
-              className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+              disabled={loading || noTokens}
+              className="min-h-10 flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
             />
-            <label className="cursor-pointer mb-0">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={handlePdfUpload}
-              />
-              <Button variant="ghost" size="icon" type="button">
-                <Upload className="w-5 h-5" />
-              </Button>
-            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={handlePdfUpload}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              type="button"
+              className="shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Upload PDF"
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading || !input.trim() || noTokens}
+              size="icon"
+              className="shrink-0"
+              aria-label="Send message"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
           </div>
-          <Button
-            type="submit"
-            disabled={
-              loading || !input.trim() || (tokens !== null && tokens <= 0)
-            }
-            size="sm"
-            className="gap-2"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-            {loading ? "Sending..." : "Send"}
-          </Button>
+          <p className="mt-2 px-1 text-[11px] text-muted-foreground">
+            Enter to send · PDF upload is attached for context (processing may
+            be limited)
+          </p>
         </form>
+      </Surface>
+        </main>
       </div>
-      <FooterHider />
-    </div>
+    </DashboardShell>
   );
 }

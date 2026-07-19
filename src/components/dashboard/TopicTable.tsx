@@ -1,14 +1,16 @@
 "use client";
-import { EditIcon, PlusIcon, TrashIcon, Loader2 } from "lucide-react";
-import { Button } from "../ui/button";
+
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
+  BookOpen,
+  MessageSquare,
+  PlusIcon,
+  TrashIcon,
+  Loader2,
+  Calendar,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import { Button } from "../ui/button";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -20,6 +22,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "../ui/input";
 import Link from "next/link";
+import {
+  DashboardShell,
+  PageHeader,
+  Surface,
+  TokenBadge,
+} from "./DashboardShell";
+import { cn } from "@/lib/utils";
 
 interface Topic {
   _id: string;
@@ -29,13 +38,23 @@ interface Topic {
   updatedAt: string;
 }
 
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export const TopicTable = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newTopicTitle, setNewTopicTitle] = useState("");
   const [tokens, setTokens] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTopics();
@@ -48,9 +67,11 @@ export const TopicTable = () => {
       if (response.ok) {
         const data = await response.json();
         setTopics(data.topics || []);
+      } else {
+        setError("Could not load topics. Please try again.");
       }
     } catch {
-      console.error("Error fetching topics:");
+      setError("Could not load topics. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -60,6 +81,7 @@ export const TopicTable = () => {
     if (!newTopicTitle.trim()) return;
 
     setCreating(true);
+    setError(null);
     try {
       const response = await fetch("/api/topics", {
         method: "POST",
@@ -72,15 +94,18 @@ export const TopicTable = () => {
         setTopics([data.topic, ...topics]);
         setNewTopicTitle("");
         setIsOpen(false);
+      } else {
+        setError("Failed to create topic.");
       }
     } catch {
-      console.error("Error creating topic:");
+      setError("Failed to create topic.");
     } finally {
       setCreating(false);
     }
   };
 
   const deleteTopic = async (topicId: string) => {
+    setDeletingId(topicId);
     try {
       const response = await fetch(`/api/topics/${topicId}`, {
         method: "DELETE",
@@ -88,9 +113,13 @@ export const TopicTable = () => {
 
       if (response.ok) {
         setTopics(topics.filter((t) => t._id !== topicId));
+      } else {
+        setError("Failed to delete topic.");
       }
     } catch {
-      console.error("Error deleting topic:");
+      setError("Failed to delete topic.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -100,116 +129,159 @@ export const TopicTable = () => {
       if (response.ok) {
         const data = await response.json();
         setTokens(data.tokens);
-        console.log(data.tokens);
       }
-    } catch (err) {
-      console.error("Error fetching tokens:", err);
+    } catch {
       setTokens(null);
     }
   };
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-14 bg-background text-foreground">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin" />
+      <DashboardShell size="xl">
+        <div className="flex h-64 flex-col items-center justify-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading your topics…</p>
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-14 bg-background text-foreground dark:bg-background/50 dark:text-foreground">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">My Topics</h1>
-        <div className="flex items-center gap-4">
-          {tokens !== null && (
-            <span className="text-sm font-medium bg-muted px-3 py-1 rounded-full border">
-              Tokens left: {tokens}
-            </span>
-          )}
-          <Button variant="outline" onClick={() => setIsOpen(true)}>
-            <PlusIcon className="w-4 h-4 mr-2" />
+    <DashboardShell size="xl">
+      <PageHeader
+        title="My Topics"
+        description="Create topics and open a chat to learn with mind maps, summaries, and quizzes."
+        icon={<BookOpen className="h-5 w-5 text-primary" />}
+        meta={<TokenBadge tokens={tokens} />}
+        actions={
+          <Button onClick={() => setIsOpen(true)} className="gap-2">
+            <PlusIcon className="h-4 w-4" />
             New Topic
           </Button>
+        }
+      />
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
         </div>
+      )}
+
+      {/* Stats strip */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Surface className="px-4 py-3">
+          <p className="text-xs text-muted-foreground">Topics</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">
+            {topics.length}
+          </p>
+        </Surface>
+        <Surface className="px-4 py-3">
+          <p className="text-xs text-muted-foreground">Tokens</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">
+            {tokens ?? "—"}
+          </p>
+        </Surface>
+        <Surface className="col-span-2 px-4 py-3 sm:col-span-1">
+          <p className="text-xs text-muted-foreground">Study tools</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm font-medium">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Chat · Mindmap · Quiz
+          </p>
+        </Surface>
       </div>
 
       {topics.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium mb-2">No topics yet</h3>
-          <p className="text-muted-foreground mb-4">
-            Create your first topic to get started with learning.
+        <Surface className="flex flex-col items-center px-6 py-16 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
+            <MessageSquare className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold">No topics yet</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            Create your first topic to start chatting, generate mind maps, and
+            take quizzes on any subject.
           </p>
-          <Button onClick={() => setIsOpen(true)}>
-            <PlusIcon className="w-4 h-4 mr-2" />
+          <Button onClick={() => setIsOpen(true)} className="mt-6 gap-2">
+            <PlusIcon className="h-4 w-4" />
             Create Topic
           </Button>
-        </div>
+        </Surface>
       ) : (
-        <Table className="rounded-2xl border">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Topic</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {topics.map((topic) => (
-              <TableRow
-                key={topic._id}
-                className="hover:bg-muted/50 cursor-pointer"
-              >
-                <TableCell>
-                  <Link
-                    href={`/dashboard/chat/${topic.id}`}
-                    className="text-primary underline font-medium"
-                  >
-                    {topic.title}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  {new Date(topic.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell className="flex items-center gap-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {topics.map((topic) => (
+            <Surface
+              key={topic._id}
+              className="group flex flex-col transition-colors hover:border-border hover:bg-card"
+            >
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <BookOpen className="h-4 w-4" />
+                  </div>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      // TODO: Implement edit functionality
-                    }}
-                  >
-                    <EditIcon className="w-4 h-4" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground opacity-70 hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                     onClick={() => deleteTopic(topic._id)}
+                    disabled={deletingId === topic._id}
+                    aria-label={`Delete ${topic.title}`}
                   >
-                    <TrashIcon className="w-4 h-4" />
-                    Delete
+                    {deletingId === topic._id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <TrashIcon className="h-4 w-4" />
+                    )}
                   </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                </div>
+
+                <Link
+                  href={`/dashboard/chat/${topic.id}`}
+                  className="min-w-0 flex-1"
+                >
+                  <h3 className="line-clamp-2 text-base font-semibold leading-snug tracking-tight transition-colors group-hover:text-primary">
+                    {topic.title}
+                  </h3>
+                </Link>
+
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatDate(topic.createdAt)}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 border-t border-border/50 px-4 py-3 sm:px-5">
+                <Button asChild size="sm" className="flex-1 gap-2">
+                  <Link href={`/dashboard/chat/${topic.id}`}>
+                    Open chat
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className={cn("hidden sm:inline-flex")}
+                >
+                  <Link href={`/dashboard/quiz/${topic.id}`}>Quiz</Link>
+                </Button>
+              </div>
+            </Surface>
+          ))}
+        </div>
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create New Topic</DialogTitle>
+            <DialogTitle>Create new topic</DialogTitle>
             <DialogDescription>
-              Create a new topic to start learning about it.
+              Name a subject you want to learn. You can chat, summarize, and
+              quiz yourself on it next.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 py-1">
             <Input
               type="text"
-              placeholder="e.g., JavaScript Fundamentals"
+              placeholder="e.g. JavaScript Fundamentals"
               value={newTopicTitle}
               onChange={(e) => setNewTopicTitle(e.target.value)}
               onKeyDown={(e) => {
@@ -217,25 +289,33 @@ export const TopicTable = () => {
                   createTopic();
                 }
               }}
+              autoFocus
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={createTopic}
               disabled={creating || !newTopicTitle.trim()}
+              className="gap-2"
             >
               {creating ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating…
                 </>
               ) : (
-                "Create Topic"
+                <>
+                  <PlusIcon className="h-4 w-4" />
+                  Create
+                </>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardShell>
   );
 };

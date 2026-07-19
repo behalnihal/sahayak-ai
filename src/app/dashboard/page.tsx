@@ -5,9 +5,7 @@ export default function Page() {
   return (
     <>
       <SignedIn>
-        <div>
-          <TopicTable />
-        </div>
+        <TopicTable />
       </SignedIn>
       <SignedOut>
         <RedirectToSignIn />

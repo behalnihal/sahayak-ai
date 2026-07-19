@@ -59,9 +59,11 @@ export async function GET() {
     const user = await getOrCreateUser(userId);
 
     // Get user's topics
-    const topics = await Topic.find({ userId: user._id }).sort({
-      createdAt: -1,
-    });
+    const topics = await Topic.find({ userId: user._id })
+      .select("-messages")
+      .sort({
+        createdAt: -1,
+      });
 
     return NextResponse.json({ topics });
   } catch (error) {

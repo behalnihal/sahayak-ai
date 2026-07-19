@@ -176,9 +176,18 @@
 }
 
 .markdown-body {
-  line-height: 1.7;
-  font-size: 1rem;
+  line-height: 1.65;
+  font-size: 0.95rem;
   color: var(--foreground);
+  word-break: break-word;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
 }
 
 .markdown-body h1,

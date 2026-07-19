@@ -1,5 +1,33 @@
 import mongoose, { models } from "mongoose";
 
+const messageSchema = new mongoose.Schema(
+  {
+    role: {
+      type: String,
+      enum: ["user", "assistant"],
+      required: true,
+    },
+    content: {
+      type: String,
+      required: true,
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+    type: {
+      type: String,
+      enum: ["mindmap"],
+      required: false,
+    },
+    id: {
+      type: String,
+      required: false,
+    },
+  },
+  { _id: false }
+);
+
 const topicSchema = new mongoose.Schema({
   id: {
     type: String,
@@ -22,6 +50,10 @@ const topicSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now,
+  },
+  messages: {
+    type: [messageSchema],
+    default: [],
   },
 });
 
